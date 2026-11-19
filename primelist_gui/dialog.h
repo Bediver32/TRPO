@@ -20,6 +20,7 @@ public slots:
     void calculate();
 
 private:
+    void showError(const QString &message);
     Ui::Dialog * ui;
 };
 #endif // DIALOG_H

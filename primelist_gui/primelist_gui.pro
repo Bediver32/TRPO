@@ -9,5 +9,6 @@ HEADERS += dialog.h
 FORMS += dialog.ui
 
 include(../primelist_lib/primelist_link.pri)
+include(i18n.pri)
 
 DISTFILES += .astylerc

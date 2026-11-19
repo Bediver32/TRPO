@@ -11,3 +11,4 @@ DISTFILES += .astylerc
 INCLUDEPATH += ../primelist_gui
 
 include(../primelist_lib/primelist_link.pri)
+include(../primelist_gui/i18n.pri)

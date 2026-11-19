@@ -75,7 +75,7 @@ void PrimeListTest::rejectsInvalidBounds() {
         primelist(lower, upper);
         QFAIL("Expected std::out_of_range");
     } catch (const std::out_of_range &error) {
-        QVERIFY(typeid(error) == typeid(std::out_of_range));
+        QVERIFY(typeid(error) == typeid(PrimeRangeError));
         QCOMPARE(QString::fromUtf8(error.what()), message);
     } catch (const std::exception &error) {
         QFAIL(error.what());
