@@ -12,7 +12,8 @@ enum ExitCode {
     Success = 0,
     MissingArguments = 1,
     InvalidDecimal = 2,
-    InvalidBounds = 3
+    InvalidBounds = 3,
+    UnexpectedError = 4
 };
 
 long long parseDecimal(const char * text, const char * parameter) {
@@ -50,8 +51,17 @@ int main(int argc, char * argv[]) {
             std::cout << n << '\n';
         }
         return Success;
-    } catch(const std::exception &error) {
+    } catch(const std::length_error &error) {
+        std::cerr << "Ошибка: " << error.what() << '\n';
+        return MissingArguments;
+    } catch(const std::invalid_argument &error) {
+        std::cerr << "Ошибка: " << error.what() << '\n';
+        return InvalidDecimal;
+    } catch(const std::out_of_range &error) {
         std::cerr << "Ошибка: " << error.what() << '\n';
         return InvalidBounds;
+    } catch(const std::exception &error) {
+        std::cerr << "Ошибка: " << error.what() << '\n';
+        return UnexpectedError;
     }
 }
