@@ -1,7 +1,9 @@
 #include <QtTest>
 
+#include <QAbstractButton>
 #include <QApplication>
 #include <QEvent>
+#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
@@ -13,6 +15,7 @@
 #include <memory>
 
 #include "dialog.h"
+#include "translation.h"
 
 class PrimeListGuiTest : public QObject {
     Q_OBJECT
@@ -29,6 +32,8 @@ private slots:
     void completesKeyboardAndMouseWorkflow();
     void reportsInputErrors_data();
     void reportsInputErrors();
+    void localizesDialog_data();
+    void localizesDialog();
 
 private:
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -41,6 +46,7 @@ private:
     QListWidget * results = nullptr;
     QStringList errorMessages;
     QString errorTitle;
+    QString errorButtonText;
     QMessageBox::Icon errorIcon = QMessageBox::NoIcon;
 };
 
@@ -56,6 +62,7 @@ void PrimeListGuiTest::init() {
     QVERIFY(results);
     errorMessages.clear();
     errorTitle.clear();
+    errorButtonText.clear();
     errorIcon = QMessageBox::NoIcon;
     qApp->installEventFilter(this);
     dialog->show();
@@ -119,6 +126,9 @@ bool PrimeListGuiTest::eventFilter(QObject *watched, QEvent *event) {
         if(auto *box = qobject_cast<QMessageBox *>(watched)) {
             errorMessages.append(box->text());
             errorTitle = box->windowTitle();
+            if(const auto *button = box->button(QMessageBox::Ok)) {
+                errorButtonText = button->text();
+            }
             errorIcon = box->icon();
             // Закрываем окно после входа QMessageBox в собственный цикл событий.
             QTimer::singleShot(0, box, &QDialog::accept);
@@ -205,6 +215,70 @@ void PrimeListGuiTest::reportsInputErrors() {
     QCOMPARE(errorTitle, QStringLiteral("Ошибка"));
     QCOMPARE(errorIcon, QMessageBox::Critical);
     QCOMPARE(results->count(), 0);
+}
+
+void PrimeListGuiTest::localizesDialog_data() {
+    QTest::addColumn<QString>("localeName");
+    QTest::addColumn<QStringList>("interfaceText");
+    QTest::addColumn<QStringList>("messages");
+    const int maximum = std::numeric_limits<int>::max();
+    QTest::newRow("ru_RU") << QStringLiteral("ru_RU")
+                           << QStringList{QStringLiteral("Простые числа"), QStringLiteral("Нижняя граница A:"),
+                                          QStringLiteral("Верхняя граница B:"), QStringLiteral("Вычислить"),
+                                          QStringLiteral("Ошибка"), QStringLiteral("ОК")}
+                           << QStringList{QStringLiteral("Параметр A введён неверно: поле пустое."),
+                                          QStringLiteral("Параметр B введён неверно: значение не является десятичным целым числом."),
+                                          QStringLiteral("Параметр A (нижняя граница) должен быть натуральным числом от 1 до %1.").arg(maximum),
+                                          QStringLiteral("Параметр B (верхняя граница) должен быть натуральным числом от 1 до %1.").arg(maximum),
+                                          QStringLiteral("Верхняя граница B должна быть больше нижней границы A.")};
+    const QStringList englishInterface{QStringLiteral("Prime numbers"), QStringLiteral("Lower bound A:"),
+                                       QStringLiteral("Upper bound B:"), QStringLiteral("Calculate"),
+                                       QStringLiteral("Error"), QStringLiteral("OK")};
+    const QStringList englishMessages{
+        QStringLiteral("Parameter A is invalid: the field is empty."),
+        QStringLiteral("Parameter B is invalid: the value is not a decimal integer."),
+        QStringLiteral("Parameter A (lower bound) must be a positive integer from 1 to %1.").arg(maximum),
+        QStringLiteral("Parameter B (upper bound) must be a positive integer from 1 to %1.").arg(maximum),
+        QStringLiteral("Upper bound B must be greater than lower bound A.")};
+    QTest::newRow("en_US") << QStringLiteral("en_US") << englishInterface << englishMessages;
+    QTest::newRow("unsupported locale") << QStringLiteral("de_DE") << englishInterface << englishMessages;
+}
+
+void PrimeListGuiTest::localizesDialog() {
+    QFETCH(QString, localeName);
+    QFETCH(QStringList, interfaceText);
+    QFETCH(QStringList, messages);
+    QTranslator translator;
+    QVERIFY(loadInterfaceTranslation(translator, QLocale(localeName)));
+    QVERIFY(qApp->installTranslator(&translator));
+    Dialog localized;
+    const auto *labelA = localized.findChild<QLabel *>("labelA");
+    const auto *labelB = localized.findChild<QLabel *>("labelB");
+    auto *inputA = localized.findChild<QLineEdit *>("lineEditA");
+    auto *inputB = localized.findChild<QLineEdit *>("lineEditB");
+    auto *button = localized.findChild<QPushButton *>("pushButton");
+    QVERIFY(labelA);
+    QVERIFY(labelB);
+    QVERIFY(inputA);
+    QVERIFY(inputB);
+    QVERIFY(button);
+    const QStringList labels{localized.windowTitle(), labelA->text(), labelB->text(), button->text()};
+    QCOMPARE(labels, interfaceText.mid(0, 4));
+    const QList<QPair<QString, QString>> invalidInputs{
+        {QString(), QStringLiteral("10")},
+        {QStringLiteral("1"), QStringLiteral("abc")},
+        {QStringLiteral("0"), QStringLiteral("10")},
+        {QStringLiteral("1"), QStringLiteral("0")},
+        {QStringLiteral("2"), QStringLiteral("2")}
+    };
+    for(const auto &input : invalidInputs) {
+        inputA->setText(input.first);
+        inputB->setText(input.second);
+        button->click();
+        QCOMPARE(errorTitle, interfaceText.at(4));
+        QCOMPARE(errorButtonText, interfaceText.at(5));
+    }
+    QCOMPARE(errorMessages, messages);
 }
 
 QTEST_MAIN(PrimeListGuiTest)
