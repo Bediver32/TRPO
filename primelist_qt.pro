@@ -1,5 +1,6 @@
 TEMPLATE = subdirs
 
-SUBDIRS += primelist_lib primelist primelist_gui
+SUBDIRS += primelist_lib primelist primelist_gui primelist_tests
 primelist.depends = primelist_lib
 primelist_gui.depends = primelist_lib
+primelist_tests.depends = primelist_lib
