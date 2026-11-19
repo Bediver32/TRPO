@@ -1,4 +1,3 @@
-#include <climits>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -36,18 +35,7 @@ int main(int argc, char * argv[]) {
         }
         const long long left = parseDecimal(argv[1], "A (нижняя граница)");
         const long long right = parseDecimal(argv[2], "B (верхняя граница)");
-        if(left < 1 || left > INT_MAX) {
-            throw std::out_of_range("Параметр A (нижняя граница) должен быть натуральным числом от 1 до " +
-                                    std::to_string(INT_MAX) + ".");
-        }
-        if(right < 1 || right > INT_MAX) {
-            throw std::out_of_range("Параметр B (верхняя граница) должен быть натуральным числом от 1 до " +
-                                    std::to_string(INT_MAX) + ".");
-        }
-        if(right <= left) {
-            throw std::out_of_range("Верхняя граница B должна быть больше нижней границы A.");
-        }
-        for(int n : primelist(static_cast<int>(left), static_cast<int>(right))) {
+        for(int n : primelist(left, right)) {
             std::cout << n << '\n';
         }
         return Success;

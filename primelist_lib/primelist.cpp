@@ -1,5 +1,9 @@
 #include "primelist.h"
 
+#include <climits>
+#include <stdexcept>
+#include <string>
+
 namespace
 {
 
@@ -24,8 +28,22 @@ bool isprime(int n)
 
 } // namespace
 
-std::vector<int> primelist(int l, int r)
+std::vector<int> primelist(long long l, long long r)
 {
+  if(l < 1 || l > INT_MAX)
+  {
+    throw std::out_of_range("Параметр A (нижняя граница) должен быть натуральным числом от 1 до " +
+                            std::to_string(INT_MAX) + ".");
+  }
+  if(r < 1 || r > INT_MAX)
+  {
+    throw std::out_of_range("Параметр B (верхняя граница) должен быть натуральным числом от 1 до " +
+                            std::to_string(INT_MAX) + ".");
+  }
+  if(r <= l)
+  {
+    throw std::out_of_range("Верхняя граница B должна быть больше нижней границы A.");
+  }
   std::vector<int> result;
   // long long - чтобы счётчик не переполнился при r == INT_MAX
   for(long long n = l; n <= r; ++n)

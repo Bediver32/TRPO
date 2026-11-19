@@ -4,8 +4,7 @@
 #include <vector>
 
 // Возвращает все простые числа из отрезка [l, r] по возрастанию.
-// Библиотека не взаимодействует с пользователем, поэтому её можно
-// использовать без изменений в приложении с графическим интерфейсом.
-std::vector<int> primelist(int l, int r);
+// Выбрасывает std::out_of_range, если 1 <= l < r <= INT_MAX не выполняется.
+std::vector<int> primelist(long long l, long long r);
 
 #endif // PRIMELIST_H
