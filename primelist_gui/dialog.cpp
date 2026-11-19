@@ -5,31 +5,29 @@
 #include <QString>
 
 #include <climits>
+#include <stdexcept>
 
 #include "primelist.h"
 
 namespace {
 
-// Преобразует текст поля ввода в натуральное число, помещающееся в int.
-// Возвращает пустую строку при успехе, иначе текст причины ошибки.
-QString parseNatural(const QString &text, int & value) {
-    const QString s = text.trimmed();
-    if(s.isEmpty()) {
-        return QObject::tr("поле пустое");
+int parseNatural(const QString &text, const QString &parameter) {
+    const QString value = text.trimmed();
+    if(value.isEmpty()) {
+        throw std::invalid_argument(Dialog::tr("Параметр %1 введён неверно: поле пустое.")
+                                    .arg(parameter).toStdString());
     }
     bool ok = false;
-    const qlonglong n = s.toLongLong(&ok, 10);
+    const qlonglong number = value.toLongLong(&ok, 10);
     if(!ok) {
-        return QObject::tr("значение не является десятичным целым числом");
+        throw std::invalid_argument(Dialog::tr("Параметр %1 введён неверно: значение не является десятичным целым числом.")
+                                    .arg(parameter).toStdString());
     }
-    if(n < 1) {
-        return QObject::tr("число должно быть натуральным (не меньше 1)");
+    if(number < 1 || number > INT_MAX) {
+        throw std::out_of_range(Dialog::tr("Параметр %1 должен быть натуральным числом от 1 до %2.")
+                                .arg(parameter).arg(INT_MAX).toStdString());
     }
-    if(n > INT_MAX) {
-        return QObject::tr("число слишком большое (максимум %1)").arg(INT_MAX);
-    }
-    value = static_cast<int>(n);
-    return QString();
+    return static_cast<int>(number);
 }
 
 } // namespace
@@ -45,27 +43,18 @@ Dialog::~Dialog() {
 }
 
 void Dialog::calculate() {
-    int a = 0;
-    int b = 0;
-    const QString errA = parseNatural(ui->lineEditA->text(), a);
-    if(!errA.isEmpty()) {
-        QMessageBox::critical(this, tr("Ошибка"),
-                              tr("Параметр A введён неверно: %1.").arg(errA));
-        return;
-    }
-    const QString errB = parseNatural(ui->lineEditB->text(), b);
-    if(!errB.isEmpty()) {
-        QMessageBox::critical(this, tr("Ошибка"),
-                              tr("Параметр B введён неверно: %1.").arg(errB));
-        return;
-    }
-    if(b <= a) {
-        QMessageBox::critical(this, tr("Ошибка"),
-                              tr("Верхняя граница B должна быть больше нижней границы A."));
-        return;
-    }
-    ui->listWidget->clear();
-    for(int n : primelist(a, b)) {
-        ui->listWidget->addItem(QString::number(n));
+    try {
+        const int a = parseNatural(ui->lineEditA->text(), QStringLiteral("A"));
+        const int b = parseNatural(ui->lineEditB->text(), QStringLiteral("B"));
+        if(b <= a) {
+            throw std::out_of_range(tr("Верхняя граница B должна быть больше нижней границы A.").toStdString());
+        }
+        const auto primes = primelist(a, b);
+        ui->listWidget->clear();
+        for(int n : primes) {
+            ui->listWidget->addItem(QString::number(n));
+        }
+    } catch(const std::exception &error) {
+        QMessageBox::critical(this, tr("Ошибка"), QString::fromUtf8(error.what()));
     }
 }
