@@ -1,0 +1,15 @@
+.qtcreator/
+.pro.user
+CMakeLists.txt.user*
+build*/
+Debug/
+Release/
+*.o
+*.obj
+*.exe
+.dll
+moc_
+ui*.h
+qrc*
+Makefile*
+.qmake.stash
