@@ -1,11 +1,7 @@
 TEMPLATE = app
 CONFIG += console c++17
-CONFIG -= app_bundle
-CONFIG -= qt
+CONFIG -= app_bundle qt
 
-SOURCES += \
-    main.cpp \
-    primelist.cpp
+SOURCES += main.cpp
 
-HEADERS += \
-    primelist.h
+include(../primelist_lib/primelist_link.pri)

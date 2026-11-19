@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <climits>
 
-#include "../primelist/primelist.h"
+#include "primelist.h"
 
 namespace {
 

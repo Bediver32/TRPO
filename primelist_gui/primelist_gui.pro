@@ -4,14 +4,8 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
 
-SOURCES += \
-    main.cpp \
-    dialog.cpp \
-    ../primelist/primelist.cpp
+SOURCES += main.cpp dialog.cpp
+HEADERS += dialog.h
+FORMS += dialog.ui
 
-HEADERS += \
-    dialog.h \
-    ../primelist/primelist.h
-
-FORMS += \
-    dialog.ui
+include(../primelist_lib/primelist_link.pri)
