@@ -1,8 +1,12 @@
 #include <climits>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
+#include <string>
 
 #include "primelist.h"
+
+namespace {
 
 enum ExitCode {
     Success = 0,
@@ -11,40 +15,43 @@ enum ExitCode {
     InvalidBounds = 3
 };
 
+long long parseDecimal(const char * text, const char * parameter) {
+    std::istringstream input(text);
+    long long value = 0;
+    input >> std::noskipws >> value;
+    if(input.fail() || !input.eof()) {
+        throw std::invalid_argument(std::string("Параметр ") + parameter +
+                                    " должен быть десятичным целым числом, представимым в long long.");
+    }
+    return value;
+}
+
+} // namespace
+
 int main(int argc, char * argv[]) {
-    if(argc < 3) {
-        std::cerr << "Ошибка: укажите нижнюю и верхнюю границы диапазона.\n";
-        return MissingArguments;
-    }
-    long long left = 0, right = 0;
-    std::istringstream leftInput(argv[1]);
-    std::istringstream rightInput(argv[2]);
-    leftInput >> std::noskipws >> left;
-    rightInput >> std::noskipws >> right;
-    if(leftInput.fail() || !leftInput.eof()) {
-        std::cerr << "Ошибка: параметр A (нижняя граница) должен быть десятичным целым числом, представимым в long long.\n";
-        return InvalidDecimal;
-    }
-    if(rightInput.fail() || !rightInput.eof()) {
-        std::cerr << "Ошибка: параметр B (верхняя граница) должен быть десятичным целым числом, представимым в long long.\n";
-        return InvalidDecimal;
-    }
-    if(left < 1 || left > INT_MAX) {
-        std::cerr << "Ошибка: параметр A (нижняя граница) должен быть натуральным числом от 1 до "
-                  << INT_MAX << ".\n";
+    try {
+        if(argc < 3) {
+            throw std::length_error("Укажите нижнюю и верхнюю границы диапазона.");
+        }
+        const long long left = parseDecimal(argv[1], "A (нижняя граница)");
+        const long long right = parseDecimal(argv[2], "B (верхняя граница)");
+        if(left < 1 || left > INT_MAX) {
+            throw std::out_of_range("Параметр A (нижняя граница) должен быть натуральным числом от 1 до " +
+                                    std::to_string(INT_MAX) + ".");
+        }
+        if(right < 1 || right > INT_MAX) {
+            throw std::out_of_range("Параметр B (верхняя граница) должен быть натуральным числом от 1 до " +
+                                    std::to_string(INT_MAX) + ".");
+        }
+        if(right <= left) {
+            throw std::out_of_range("Верхняя граница B должна быть больше нижней границы A.");
+        }
+        for(int n : primelist(static_cast<int>(left), static_cast<int>(right))) {
+            std::cout << n << '\n';
+        }
+        return Success;
+    } catch(const std::exception &error) {
+        std::cerr << "Ошибка: " << error.what() << '\n';
         return InvalidBounds;
     }
-    if(right < 1 || right > INT_MAX) {
-        std::cerr << "Ошибка: параметр B (верхняя граница) должен быть натуральным числом от 1 до "
-                  << INT_MAX << ".\n";
-        return InvalidBounds;
-    }
-    if(right <= left) {
-        std::cerr << "Ошибка: верхняя граница B должна быть больше нижней границы A.\n";
-        return InvalidBounds;
-    }
-    for(int n : primelist(static_cast<int>(left), static_cast<int>(right))) {
-        std::cout << n << '\n';
-    }
-    return Success;
 }
