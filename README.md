@@ -1,35 +1,83 @@
-# Лабораторная работа № 6
+# Лабораторная работа № 7 — исключения, ветки и слияние
 
-Откройте `primelist_qt.pro` в Qt Creator. Приложения используют Artistic Style с отступом 4 пробела и стилем Java. Библиотека использует стиль BSD с отступом 2 пробела. Правила сохранены в файле `.astylerc` каждого проекта.
+Оба приложения обрабатывают ошибки через исключения C++. Консоль выводит сообщение в stderr и возвращает именованный код из enum ExitCode. GUI показывает сообщение в диалоговом окне. Статическая библиотека проверяет числовые ограничения: обе границы должны быть натуральными, помещаться в int, а верхняя граница должна быть строго больше нижней.
 
-## Qt Creator
+## Сборка и проверка
 
-Включите модуль **Beautifier** через **Справка → О модулях** и перезапустите IDE. В настройках **Стилизатор → Artistic Style** укажите путь к `AStyle.exe`, выберите правила из файла проекта `.astylerc` и включите форматирование при сохранении. Чтобы проверить настройки, откройте C++-файл и вызовите **Стилизатор → Artistic Style → Форматировать текущий файл**.
+Откройте primelist_qt.pro в Qt Creator и соберите проект комплектом Desktop Qt MinGW. Для консольного приложения задайте аргументы в **Проекты → Настройки запуска → Параметры командной строки**.
 
-Добавьте каталог с `AStyle.exe` в PATH. Для коммитов из Qt Creator можно указать этот каталог в настройках **Управление версиями → Git → Добавить в начало PATH**. Для коммитов из терминала проверьте доступность команды `AStyle --version`.
+| Аргументы | Код | Результат |
+| --- | --- | --- |
+| 1 10 | 0 | 2, 3, 5, 7 |
+| 1 | 1 | Не хватает верхней границы |
+| 1 10abc | 2 | Неверный формат параметра B |
+| 0 10 | 3 | Параметр A должен быть натуральным |
+| 2 2 или 10 1 | 3 | B должна быть строго больше A |
 
-## Перенос в два локальных репозитория
+Код 4 используется для других исключений стандартной библиотеки. В Windows CMD код завершения можно вывести командой echo %ERRORLEVEL% на следующей строке. Для GUI проверьте A = 1, B = 10, затем A = 2, B = 2 и A = abc, B = 10.
 
-Клонируйте ветку `lab6` в отдельную папку `6-исходники`. Сделайте копию своей папки для сдачи ЛР5 под именем `6`, сохранив обе папки `.git` внутри приложений.
+## Два локальных репозитория для сдачи
 
-```powershell
-git clone --branch lab6 https://github.com/Bediver32/TRPO.git "C:\Users\Danil\Desktop\TRPO\lab\6-исходники"
-```
+Оставьте клон ветки lab7 в папке 7-исходники. Скопируйте свою папку ЛР6 в папку 7, сохранив .git внутри primelist и primelist_gui. Откройте PowerShell в папке 7. Ниже команды для чистой копии ЛР6, в которой ветки exceptions ещё нет. При ошибке остановитесь на указанной команде.
 
-Откройте PowerShell в папке `6` и выполните команды по одной строке.
+~~~powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $src = 'C:\Users\Danil\Desktop\TRPO\lab\7-исходники'
+    $env:Path = 'C:\Qt\astyle-3.6.26-x64;' + $env:Path
 
-```powershell
-$src = 'C:\Users\Danil\Desktop\TRPO\lab\6-исходники'
-$tmp = Join-Path $env:TEMP ('trpo-lab6-' + [guid]::NewGuid())
-$cli = git -C $src format-patch -o "$tmp\cli" c07604e..HEAD -- primelist/
-$gui = git -C $src format-patch -o "$tmp\gui" c07604e..HEAD -- primelist_gui/
-git -C primelist am -p2 $cli
-git -C primelist_gui am -p2 $gui
-Copy-Item "$src\primelist_lib\.astylerc","$src\primelist_lib\primelist.cpp","$src\primelist_lib\primelist_lib.pro" .\primelist_lib\
-git -C primelist config --local core.hooksPath .githooks
-git -C primelist_gui config --local core.hooksPath .githooks
-```
+    function Run-Git {
+        git @args
+        if ($LASTEXITCODE -ne 0) { throw "Ошибка Git: $args" }
+    }
 
-В новой копии отдельного репозитория приложения настройку `core.hooksPath` нужно выполнить один раз. Правила `.astylerc` и сценарий обработчика хранятся в истории Git. При коммите сценарий проверяет все отслеживаемые `.cpp` и `.h`, форматирует их и добавляет результат в коммит. Если в исходнике есть изменения вне индекса, коммит останавливается, чтобы сохранить эти изменения отдельно. Перед повторным коммитом добавьте их в индекс или временно уберите через stash.
+    function Apply-Source($repo, $rev, $file) {
+        $blob = Run-Git -C $repo rev-parse --verify "${rev}:${repo}/${file}"
+        Run-Git -C $repo update-index --cacheinfo "100644,$blob,$file"
+        Run-Git -C $repo restore --worktree -- $file
+    }
 
-Для проверки измените пробелы около оператора в C++-файле, добавьте файл через `git add` и выполните `git commit`. Обработчик напечатает `pre-commit: formatted …`, а в коммите окажется отформатированная версия.
+    foreach ($repo in 'primelist', 'primelist_gui') {
+        if (-not (Test-Path "$repo\.git")) { throw "В $repo отсутствует .git" }
+        if (Run-Git -C $repo status --porcelain) { throw "Есть изменения в $repo" }
+        if (Run-Git -C $repo branch --list exceptions) { throw "Ветка exceptions уже есть в $repo" }
+    }
+
+    foreach ($repo in 'primelist', 'primelist_gui') {
+        Run-Git -C $repo fetch --no-tags $src HEAD
+    }
+
+    $cliMain = Run-Git -C primelist branch --show-current
+    Run-Git -C primelist switch -c exceptions
+    Apply-Source primelist 7796f5f main.cpp
+    Run-Git -C primelist commit -m 'Lab 7: handle command-line errors with exceptions'
+    Run-Git -C primelist switch $cliMain
+    Apply-Source primelist 3069bc6 main.cpp
+    Run-Git -C primelist commit -m 'Lab 7: name the CLI exit codes'
+
+    # Готовое разрешение конфликта сохранено в d70de7a.
+    Run-Git -C primelist merge --no-ff --no-commit -s ours exceptions
+    Apply-Source primelist d70de7a main.cpp
+    Run-Git -C primelist commit -m 'Merge exceptions and retain named exit codes'
+    Apply-Source primelist 5a1a000 main.cpp
+    Run-Git -C primelist commit -m 'Lab 7: map exception types to named exit codes'
+
+    $guiMain = Run-Git -C primelist_gui branch --show-current
+    Run-Git -C primelist_gui switch -c exceptions
+    Apply-Source primelist_gui 229fbb6 dialog.cpp
+    Run-Git -C primelist_gui commit -m 'Lab 7: handle GUI input errors with exceptions'
+    Run-Git -C primelist_gui switch $guiMain
+    Run-Git -C primelist_gui merge --no-ff -m 'Merge exceptions' exceptions
+
+    Copy-Item "$src\primelist_lib\primelist.cpp","$src\primelist_lib\primelist.h" .\primelist_lib\
+    Apply-Source primelist c54ab21 main.cpp
+    Run-Git -C primelist commit -m 'Lab 7: delegate numeric validation to the library'
+    Apply-Source primelist_gui c54ab21 dialog.cpp
+    Run-Git -C primelist_gui commit -m 'Lab 7: delegate numeric validation to the library'
+
+    Run-Git -C primelist log --graph --oneline --all -9
+    Run-Git -C primelist_gui log --graph --oneline --all -7
+}
+~~~
+
+Проверьте, что в обоих графах есть ветка exceptions и коммит слияния с двумя родителями. Для сдачи упакуйте папку 7 с исходниками библиотеки и обеими папками .git внутри приложений. Каталог сборки в архив не нужен.
