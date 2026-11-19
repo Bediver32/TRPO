@@ -19,7 +19,7 @@
      <item>
       <widget class="QLabel" name="labelA">
        <property name="text">
-        <string>A:</string>
+        <string>Нижняя граница A:</string>
        </property>
       </widget>
      </item>
@@ -29,7 +29,7 @@
      <item>
       <widget class="QLabel" name="labelB">
        <property name="text">
-        <string>B:</string>
+        <string>Верхняя граница B:</string>
        </property>
       </widget>
      </item>
