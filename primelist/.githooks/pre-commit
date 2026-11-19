@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+formatter=$(command -v astyle || command -v AStyle || command -v AStyle.exe) || {
+    echo 'pre-commit: Artistic Style is required on PATH.' >&2
+    exit 1
+}
+
+temp_dir=$(mktemp -d)
+trap 'rm -rf -- "$temp_dir"' EXIT
+git ls-files -z -- '*.cpp' '*.h' > "$temp_dir/source-list"
+mapfile -d '' -t sources < "$temp_dir/source-list"
+
+for source in "${sources[@]}"; do
+    if [[ ! -f "$source" || -L "$source" ]] || ! git diff --quiet -- "$source"; then
+        printf 'pre-commit: stage or stash unstaged changes to %s before committing.\n' "$source" >&2
+        exit 1
+    fi
+    mkdir -p -- "$temp_dir/files/$(dirname -- "$source")"
+    cp -- "$source" "$temp_dir/files/$source"
+done
+
+git show :.astylerc > "$temp_dir/style"
+for source in "${sources[@]}"; do
+    "$formatter" --quiet --suffix=none --project=none --options="$temp_dir/style" "$temp_dir/files/$source"
+done
+
+for source in "${sources[@]}"; do
+    if ! cmp -s -- "$source" "$temp_dir/files/$source"; then
+        cp -- "$temp_dir/files/$source" "$source"
+        git add -- "$source"
+        printf 'pre-commit: formatted %s\n' "$source"
+    fi
+done
