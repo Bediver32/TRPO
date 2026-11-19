@@ -12,16 +12,28 @@
 namespace {
 
 // Преобразует текст поля ввода в натуральное число, помещающееся в int.
-// Возвращает false, если текст не является корректным натуральным числом.
-bool parseNatural(const QString &text, int &value)
+// Возвращает пустую строку при успехе, иначе текст причины ошибки.
+QString parseNatural(const QString &text, int &value)
 {
-    bool ok = false;
-    const qlonglong n = text.trimmed().toLongLong(&ok);
-    if (!ok || n < 1 || n > INT_MAX) {
-        return false;
+    const QString s = text.trimmed();
+    if (s.isEmpty()) {
+        return QObject::tr("поле пустое");
     }
+
+    bool ok = false;
+    const qlonglong n = s.toLongLong(&ok, 10);
+    if (!ok) {
+        return QObject::tr("значение не является десятичным целым числом");
+    }
+    if (n < 1) {
+        return QObject::tr("число должно быть натуральным (не меньше 1)");
+    }
+    if (n > INT_MAX) {
+        return QObject::tr("число слишком большое (максимум %1)").arg(INT_MAX);
+    }
+
     value = static_cast<int>(n);
-    return true;
+    return QString();
 }
 
 } // namespace
@@ -42,10 +54,18 @@ void Dialog::calculate()
 {
     int a = 0;
     int b = 0;
-    if (!parseNatural(ui->lineEditA->text(), a) ||
-        !parseNatural(ui->lineEditB->text(), b)) {
-        QMessageBox::warning(this, tr("Ошибка"),
-                             tr("Нужно ввести два натуральных числа (от 1 до %1).").arg(INT_MAX));
+
+    const QString errA = parseNatural(ui->lineEditA->text(), a);
+    if (!errA.isEmpty()) {
+        QMessageBox::critical(this, tr("Ошибка"),
+                              tr("Параметр A введён неверно: %1.").arg(errA));
+        return;
+    }
+
+    const QString errB = parseNatural(ui->lineEditB->text(), b);
+    if (!errB.isEmpty()) {
+        QMessageBox::critical(this, tr("Ошибка"),
+                              tr("Параметр B введён неверно: %1.").arg(errB));
         return;
     }
 
