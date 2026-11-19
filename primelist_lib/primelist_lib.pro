@@ -8,3 +8,5 @@ else: DESTDIR = release
 
 SOURCES += primelist.cpp
 HEADERS += primelist.h
+
+DISTFILES += .astylerc
